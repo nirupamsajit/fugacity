@@ -1,9 +1,13 @@
+
 import { useState } from 'react'
+import DocumentScanner from './components/DocumentScanner'
+import SimplifiedResult from './components/SimplifiedResult'
 import './App.css'
+
 
 function App() {
   const [fileName, setFileName] = useState('')
-
+  const [extractedText, setExtractedText] = useState('')
   function handleFileChange(event) {
     const file = event.target.files[0]
     if (file) setFileName(file.name)
@@ -127,21 +131,13 @@ function App() {
             <p>Choose a document to begin your journey to understanding.</p>
           </div>
 
-          <label className="upload-box">
-            <input
-              type="file"
-              accept="image/*,.pdf,.txt"
-              onChange={handleFileChange}
-            />
-            <span className="upload-icon">↑</span>
-            <strong>{fileName || 'Choose your document'}</strong>
-            <span className="upload-help">
-              {fileName
-                ? 'File selected. Document processing is our next step.'
-                : 'Select an image, PDF, or text file from your device.'}
-            </span>
-            <span className="upload-button">Browse files</span>
-          </label>
+          
+        <DocumentScanner
+           onTextExtracted={(text) => setExtractedText(text)}
+        />
+
+        <SimplifiedResult text={extractedText} />
+
           <p className="privacy-note">Your document stays on your device until you choose to process it.</p>
         </section>
 
