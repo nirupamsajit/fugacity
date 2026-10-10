@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import VoiceControl from "./VoiceControl";
 
 function splitIntoSentences(text) {
   return text
@@ -83,7 +84,7 @@ export default function SimplifiedResult({ text = "" }) {
         </p>
       </div>
 
-      <div className="result-card">
+      <div className="result-card" id="action-items">
         <h3>Possible actions to check</h3>
         {actionSentences.length ? (
           <ul>
@@ -110,6 +111,17 @@ export default function SimplifiedResult({ text = "" }) {
           <p>Verify all dates against the original document.</p>
         </div>
       )}
+      
+      <VoiceControl
+        onReadAloud={speakSummary}
+        onStopReading={stopSpeaking}
+        onShowActions={() => {
+          document.getElementById("action-items")?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }}
+      />
 
       <div className="result-actions">
         <button type="button" onClick={speakSummary}>
