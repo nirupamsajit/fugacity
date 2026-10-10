@@ -37,43 +37,82 @@ export default function DocumentScanner({ onTextExtracted }) {
     setFile(selectedFile);
   }
 
-  async function extractImageText(selectedFile) {
-    let worker;
+  
+async function extractPdfText(selectedFile) {
+  const buffer = await selectedFile.arrayBuffer();
 
-    try {
-      worker = await createWorker("eng", 1, {
-        logger: (message) => {
-          if (message.status === "recognizing text") {
-            setProgress(Math.round(message.progress * 100));
-          }
-        },
-      });
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+  const pages = [];
 
-      const result = await worker.recognize(selectedFile);
-      return result.data.text.trim();
-    } finally {
-      if (worker) await worker.terminate();
-    }
-  }
+  // One OCR worker can be reused for all scanned pages.
+  let ocrWorker = null;
 
-  async function extractPdfText(selectedFile) {
-    const buffer = await selectedFile.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-    const pages = [];
-
+  try {
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
       const page = await pdf.getPage(pageNumber);
       const content = await page.getTextContent();
+
       const pageText = content.items
         .map((item) => ("str" in item ? item.str : ""))
-        .join(" ");
+        .join(" ")
+        .trim();
 
-      pages.push(pageText);
+      // If the page contains selectable text, keep it.
+      if (pageText.length > 20) {
+        pages.push(pageText);
+      } else {
+        // Otherwise, render the scanned page to an image for OCR.
+        const scale = 2;
+        const viewport = page.getViewport({ scale });
+
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+
+        if (!context) {
+          throw new Error("Could not create a canvas for PDF OCR.");
+        }
+
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+
+        await page.render({
+          canvasContext: context,
+          viewport,
+        }).promise;
+
+        if (!ocrWorker) {
+          ocrWorker = await createWorker("eng", 1, {
+            logger: (message) => {
+              if (message.status === "recognizing text") {
+                const pageProgress = message.progress || 0;
+                const overallProgress =
+                  ((pageNumber - 1 + pageProgress) / pdf.numPages) * 100;
+
+                setProgress(Math.round(overallProgress));
+              }
+            },
+          });
+        }
+
+        const result = await ocrWorker.recognize(canvas);
+        pages.push(result.data.text.trim());
+
+        // Release the rendered page image from memory.
+        canvas.width = 0;
+        canvas.height = 0;
+      }
+
       setProgress(Math.round((pageNumber / pdf.numPages) * 100));
     }
-
-    return pages.join("\n\n").trim();
+  } finally {
+    if (ocrWorker) {
+      await ocrWorker.terminate();
+    }
   }
+
+  return pages.filter(Boolean).join("\n\n").trim();
+}
+
 
   async function handleExtract() {
     if (!file) {
