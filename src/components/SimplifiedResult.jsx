@@ -24,11 +24,43 @@ export default function SimplifiedResult({ text = "" }) {
 
   const sentences = splitIntoSentences(text);
 
-  const actionSentences = sentences.filter((sentence) =>
-    /\b(must|need to|required|submit|complete|pay|bring|attend|contact|apply|register|deadline|due|before|by)\b/i.test(
-      sentence
-    )
-  );
+
+    const actionPatterns = [
+    /\bmust\b/i,
+    /\bneed(?:s)? to\b/i,
+    /\brequired to\b/i,
+    /\bshould\b/i,
+    /\bplease\b/i,
+    /\bdo not\b/i,
+    /\bdon't\b/i,
+    /\bmust not\b/i,
+    /\bsubmit\b/i,
+    /\bcomplete\b/i,
+    /\bpay(?:ment)?\b/i,
+    /\bbring\b/i,
+    /\battend\b/i,
+    /\bcontact\b/i,
+    /\bapply\b/i,
+    /\bregister\b/i,
+    /\bprovide\b/i,
+    /\battach\b/i,
+    /\bsign\b/i,
+    /\bfill(?: out)?\b/i,
+    /\bverify\b/i,
+    /\bconfirm\b/i,
+    /\breturn\b/i,
+    /\brespond\b/i,
+    /\bdeadline\b/i,
+    /\bdue date\b/i,
+    /\bno later than\b/i,
+    /\bbefore\b/i,
+    /\bby\s+(?:\d|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|January|February|March|April|May|June|July|August|September|October|November|December)\b/i,
+    ];
+
+const actionSentences = sentences.filter((sentence) =>
+  actionPatterns.some((pattern) => pattern.test(sentence))
+);
+
 
   const dates = findImportantDates(text);
 
